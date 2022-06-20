@@ -42,7 +42,7 @@ const TwitchBox = () => {
 
   useEffect(() => {
     changeNumberFocus(0);
-  }, []);
+  }, [submitting]);
 
   const removeValuesFromArray = (valuesArray: string[], value: string) => {
     const valuesIndex = valuesArray.findIndex((entry) => entry === value);
@@ -95,7 +95,6 @@ const TwitchBox = () => {
       setValidationMessage(e);
       setIsValid(false);
       setNumber(new Array(TOTAL_DIGIT_LENGTH));
-      changeNumberFocus(0);
     } finally {
       setIsDisabled(true);
       setSubmitting(false);
