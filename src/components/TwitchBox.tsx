@@ -1,89 +1,123 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import { validateInput } from '../api';
+import Loader from './Loader';
 
 //TODO: making it auto submit after the last number has been entered
 // TODO: accessibilty: such as tabbing to submit button
 
-const TwitchBox = () => {
-  const input1ref = useRef<HTMLInputElement>(null);
-  const input2ref = useRef<HTMLInputElement>(null);
-  const input3ref = useRef<HTMLInputElement>(null);
-  const input4ref = useRef<HTMLInputElement>(null);
-  const input5ref = useRef<HTMLInputElement>(null);
-  const input6ref = useRef<HTMLInputElement>(null);
+const TOTAL_DIGIT_LENGTH = 6;
 
-  const inputs = [
-    { name: 'input1', reference: input1ref },
-    { name: 'input2', reference: input2ref },
-    { name: 'input3', reference: input3ref },
-    { name: 'input4', reference: input4ref },
-    { name: 'input5', reference: input5ref },
-    { name: 'input6', reference: input6ref },
-  ];
+const PIN_MIN_VALUE = 0;
+const PIN_MAX_VALUE = 9;
+
+const TwitchBox = () => {
+  const [number, setNumber] = useState<Array<number | undefined>>(
+    new Array(TOTAL_DIGIT_LENGTH)
+  );
+
+  const [submitting, setSubmitting] = useState<boolean | undefined>(undefined);
+  const [isValid, setIsValid] = useState<boolean | null>(null);
+  const [validationMessage, setValidationMessage] = useState<string | null>(
+    null
+  );
+
+  const onNumberChange = (
+    numberEntry: number | undefined,
+    numberIndex: number
+  ) => {
+    const newNumber = [...number];
+    newNumber[numberIndex] = numberEntry;
+    setNumber(newNumber);
+  };
+
+  const inputRefs = useRef<HTMLInputElement[]>([]);
+
+  const changeNumberFocus = (numberIndex: number) => {
+    const ref = inputRefs.current[numberIndex];
+    if (ref) {
+      ref.focus();
+    }
+  };
 
   useEffect(() => {
-    input1ref.current?.focus();
+    changeNumberFocus(0);
   }, []);
 
-  const [values, setValues] = useState({
-    input1: '',
-    input2: '',
-    input3: '',
-    input4: '',
-    input5: '',
-    input6: '',
-  });
+  const removeValuesFromArray = (valuesArray: string[], value: string) => {
+    const valuesIndex = valuesArray.findIndex((entry) => entry === value);
+    if (valuesIndex === -1) return;
+    valuesArray.splice(valuesIndex, 1);
+  };
 
-  // useEffect(() => {
-  //   console.log(values);
-  // }, [values]);
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const previousValue = e.target.defaultValue;
+    const valuesArray = e.target.value.split('');
+    removeValuesFromArray(valuesArray, previousValue);
+    const value = valuesArray.pop();
+    if (!value) return;
+    const number = Number(value.trim());
+    if (isNaN(number) || value.length === 0) {
+      return;
+    }
+    if (number >= PIN_MIN_VALUE && number <= PIN_MAX_VALUE) {
+      onNumberChange(number, index);
+      if (index < TOTAL_DIGIT_LENGTH) {
+        changeNumberFocus(index + 1);
+      }
+    }
+  };
 
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
-
-  const handleChange = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const inputName = e.currentTarget.name;
-
-    setValues({
-      ...values,
-      [inputName]: e.currentTarget.value,
-    });
-
-    if (
-      e.key === 'Backspace' ||
-      e.key === '37' ||
-      e.key === '39' ||
-      e.key === 'Tab' ||
-      e.key === 'Shift'
-    ) {
+  const onKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    const keyboardKeyCode = e.nativeEvent.code;
+    if (keyboardKeyCode !== 'Backspace') {
       return;
     }
 
-    const currIndex = inputs.findIndex(
-      (item) => item.name === e.currentTarget.name
-    );
-    const nextIndex = currIndex + 1;
-
-    if (nextIndex === inputs.length) {
-      // handleSubmit();
-      return;
+    if (number[index] === undefined) {
+      changeNumberFocus(index - 1);
     } else {
-      const ref = inputs[nextIndex].reference;
-      ref.current?.focus();
+      onNumberChange(undefined, index);
     }
   };
 
-  const handleSubmit = (e?: any) => {
-    e?.preventDefault();
-    setIsSubmitted(true);
-    setTimeout(() => {
-      const message = `CODE SUBMITTED AS: ${Object.values(values).join('')}`;
-      alert(message);
-      setIsSubmitted(false);
-    }, 2000);
-  };
+  const validateNumber = useCallback(async () => {
+    setSubmitting(true);
+    setIsDisabled(false);
+    try {
+      const result = await validateInput(number.join(''));
+      setValidationMessage(result);
+      setIsValid(true);
+    } catch (e: any) {
+      setValidationMessage(e);
+      setIsValid(false);
+      setNumber(new Array(TOTAL_DIGIT_LENGTH));
+      changeNumberFocus(0);
+    } finally {
+      setIsDisabled(true);
+      setSubmitting(false);
+      setTimeout(() => {
+        setValidationMessage('');
+      }, 2500);
+    }
+  }, [number]);
+
+  useEffect(() => {
+    const checkNumber = async () => {
+      if (!number.includes(undefined)) {
+        await validateNumber();
+      }
+    };
+    checkNumber();
+  }, [number, validateNumber]);
+
+  const [isDisabled, setIsDisabled] = useState<boolean>(true);
 
   return (
     <section className='twitch--wrapper'>
-      {isSubmitted && <div style={{ color: 'white' }}>Submitting...</div>}
       <button className='CloseBtn'>X</button>
       <h1 className='title'>Account Verification</h1>
       <p className='para'>
@@ -91,33 +125,45 @@ const TwitchBox = () => {
         code below. You can update your account information anytime in{' '}
         <span className='purple'>Settings</span>.
       </p>
-      <form className='form--wrapper' onSubmit={(e) => handleSubmit(e)}>
-        <div className='inputs--wrapper'>
-          {inputs.map((elem) => (
-            <input
-              className='number__input'
-              key={elem.name}
-              name={elem.name}
-              type='text'
-              maxLength={1}
-              ref={elem.reference}
-              onKeyUp={(e) => handleChange(e)}
-              required
-            />
-          ))}
-        </div>
-        <p className='resend__para'>Resend Code</p>
-        <p className='twitch-policy__para'>
-          Twitch may use your phone number to call or send text messages with
-          information regarding your account.
+      <div className='inputs--wrapper'>
+        {Array.from({ length: TOTAL_DIGIT_LENGTH }).map((_, index) => (
+          <input
+            key={index}
+            disabled={submitting}
+            className='number__input'
+            // maxLength={1}
+            ref={(elem) => {
+              if (elem) {
+                inputRefs.current[index] = elem;
+              }
+            }}
+            onChange={(e) => onChange(e, index)}
+            onKeyDown={(e) => onKeyDown(e, index)}
+            value={number[index] || ''}
+          />
+        ))}
+      </div>
+      <p className='resend__para'>Resend Code</p>
+      <p className='twitch-policy__para'>
+        Twitch may use your phone number to call or send text messages with
+        information regarding your account.
+      </p>
+      <div className='lower--wrapper'>
+        <p className='para' style={{ color: isValid ? 'green' : 'red' }}>
+          {validationMessage}
         </p>
         <div className='bottom-button--wrapper'>
           <button className='genericBtn'>Back</button>
-          <button type='submit' className='genericBtn genericBtn--purple'>
-            Submit
+          <button
+            style={{ backgroundColor: isDisabled ? 'gray' : undefined }}
+            disabled={isDisabled}
+            className='genericBtn genericBtn--purple'
+            onClick={validateNumber}
+          >
+            {submitting ? <Loader /> : 'Submit'}
           </button>
         </div>
-      </form>
+      </div>
     </section>
   );
 };
