@@ -1,5 +1,5 @@
 # Clone of the Twitch 2FA Popup
 
-<a href="twitch-verification.vercel.app" />
+<a href="https://twitch-verification.vercel.app"></a>
 
 <p>Correct PIN is 123456</p>
