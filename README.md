@@ -2,6 +2,4 @@
 
 <a href="twitch-verification.vercel.app" />
 
-<br/>
-
-Correct PIN is 123456
+<p>Correct PIN is 123456</p>
