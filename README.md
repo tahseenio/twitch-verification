@@ -2,6 +2,9 @@
 
 <p>Correct PIN is 123456</p>
 
+![image](https://user-images.githubusercontent.com/55749172/176450977-0c4c30e2-b1b9-4d13-a953-3bf5db72c71d.png)
+
+
 ## Tech Used
 <p align="center">
   <img src="https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB" >
